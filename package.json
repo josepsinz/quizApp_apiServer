@@ -1,0 +1,28 @@
+{
+  "name": "apiserver_quizapp",
+  "version": "0.0.1",
+  "description": "apiServer from quizApp",
+  "main": "app.js",
+  "scripts": {
+    "start": "nodemon app.jss",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/josepsinz/quizApp_apiServer.git"
+  },
+  "author": "Josep Mira",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/josepsinz/quizApp_apiServer/issues"
+  },
+  "homepage": "https://github.com/josepsinz/quizApp_apiServer#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "nodemon": "^2.0.6",
+    "pg": "^8.5.0",
+    "pg-hstore": "^2.3.3",
+    "sequelize": "^6.3.5"
+  }
+}
