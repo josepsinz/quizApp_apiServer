@@ -9,14 +9,14 @@ const qUser = sequelize.define('qUser', {
         allowNull: false
     },
     password: {
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT,
         allowNull: false
     },
     mediumScore: {
         type: DataTypes.DECIMAL,
         primaryKey: true,
         allowNull: false,
-        defaultValue: 10
+        defaultValue: 0
     },
 }, {
     // Other model options go here
