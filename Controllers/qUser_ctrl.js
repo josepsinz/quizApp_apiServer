@@ -7,12 +7,11 @@ exports.getAll = (_, res) => {
             res.status(200).send({ users: response })
         })
         .catch((err) => {
-            res.status(500).send({ err_message: "Error al buscar los usuarios" })
+            res.status(200).send({ err_message: "Error al buscar los usuarios" })
         })
 }
 
 exports.getUserByNick = (req, res) => {
-    console.log(req.params);
     qUser.findOne({
         where: {
             nickName: req.params.nickName
@@ -22,7 +21,7 @@ exports.getUserByNick = (req, res) => {
             res.status(200).send({ user: response })
         })
         .catch((err) => {
-            res.status(500).send({ err_message: "Error al buscar usuario" })
+            res.status(200).send({ err_message: "Error al buscar usuario" })
         })
 }
 
@@ -38,10 +37,10 @@ exports.signUp = (req, res) => {
             }
             qUser.create(newuser)
                 .then((response) => {
-                    res.status(200).send({ newUser: response })
+                    res.status(200).send({ code: 5, newUser: response})
                 })
                 .catch((err) => {
-                    res.status(500).send({ err_message: err })
+                    res.status(200).send({ code: 6, err_message: `El usuario ${req.body.nickName} ya existe. Elija otro nombre de usuario. Gracias` })
                 })
         }
     })
@@ -56,18 +55,17 @@ exports.signIn = (req, res) => {
         .then((response) => {
             bcrypt.compare(req.body.password, response.password, (err, istrue) => {
                 if (err) {
-                    res.status(500).send({ message: "Error al desencriptar" })
+                    res.status(200).send({ code: 1, err_message: "Error al desencriptar" })
                 } else {
                     if (istrue) {
-                        res.status(200).send({ isLogged: istrue })
+                        res.status(200).send({ code: 2, isLogged: istrue })
                     } else {
-                        res.status(200).send({ isLogged: istrue })
+                        res.status(200).send({ code: 3, isLogged: istrue, err_message: `La contraseña para ${req.body.nickName} no es válida`})
                     }
                 }
             })
         })
         .catch((error) => {
-            console.log(error)
-            res.status(500).send({ err_message: `Usuario ${req.body.nickName} no encontrado` })
+            res.status(200).send({ code: 4, err_message: `Usuario ${req.body.nickName} no encontrado` })
         })
 }

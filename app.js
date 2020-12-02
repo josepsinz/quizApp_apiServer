@@ -1,7 +1,13 @@
 var express = require('express');
 var sequelize = require('./Config')
-
+var cors = require("cors");
 var app = express();
+
+// allow cors
+app.use(cors({
+    'Access-Control-Allow-Origin': 'https://localhost:4000/'
+}));
+
 app.get('/favicon.ico', (req, res) => res.send(204));
 
 app.use(express.json()) 
