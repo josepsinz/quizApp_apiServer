@@ -3,7 +3,7 @@ const sequelize = require("../Config")
 
 const qUser = sequelize.define('qUser', {
     // Model attributes are defined here
-    nickName: {
+    nick: {
         type: DataTypes.STRING,
         primaryKey: true,
         allowNull: false
@@ -12,8 +12,8 @@ const qUser = sequelize.define('qUser', {
         type: DataTypes.TEXT,
         allowNull: false
     },
-    mediumScore: {
-        type: DataTypes.DECIMAL,
+    medium_score: {
+        type: DataTypes.DECIMAL(10,2),
         primaryKey: true,
         allowNull: false,
         defaultValue: 0

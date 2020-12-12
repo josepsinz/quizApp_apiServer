@@ -1,5 +1,6 @@
 const qUser = require("../Models/qUser");
 const bcrypt = require("bcrypt");
+const User_Quiz = require("../Models/User_Quiz");
 
 exports.getAll = (_, res) => {
     qUser.findAll()
@@ -14,7 +15,7 @@ exports.getAll = (_, res) => {
 exports.getUserByNick = (req, res) => {
     qUser.findOne({
         where: {
-            nickName: req.params.nickName
+            nick: req.params.nick
         }
     })
         .then((response) => {
@@ -40,7 +41,7 @@ exports.signUp = (req, res) => {
                     res.status(200).send({ code: 5, newUser: response})
                 })
                 .catch((err) => {
-                    res.status(200).send({ code: 6, err_message: `El usuario ${req.body.nickName} ya existe. Elija otro nombre de usuario. Gracias` })
+                    res.status(200).send({ code: 6, err_message: `El usuario ${req.body.nick} ya existe. Elija otro nombre de usuario. Gracias` })
                 })
         }
     })
@@ -49,7 +50,7 @@ exports.signUp = (req, res) => {
 exports.signIn = (req, res) => {
     qUser.findOne({
         where: {
-            nickName: req.body.nickName
+            nick: req.body.nick
         }
     })
         .then((response) => {
@@ -60,12 +61,23 @@ exports.signIn = (req, res) => {
                     if (istrue) {
                         res.status(200).send({ code: 2, isLogged: istrue })
                     } else {
-                        res.status(200).send({ code: 3, isLogged: istrue, err_message: `La contraseña para ${req.body.nickName} no es válida`})
+                        res.status(200).send({ code: 3, isLogged: istrue, err_message: `La contraseña para ${req.body.nick} no es válida`})
                     }
                 }
             })
         })
         .catch((error) => {
-            res.status(200).send({ code: 4, err_message: `Usuario ${req.body.nickName} no encontrado` })
+            res.status(200).send({ code: 4, err_message: `Usuario ${req.body.nick} no encontrado` })
         })
+}
+
+exports.saveQuizDone = (req, res) => {
+    User_Quiz.create(req.body)
+    .then((response) => {
+        res.status(200).send({newQuizDone: response})
+    })
+    .catch((err) => {
+        console.log(err);
+        res.status(200).send({err_message: "Error al guardar cuestionario", err_code: 1})
+    })
 }

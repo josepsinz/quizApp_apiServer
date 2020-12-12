@@ -1,22 +1,18 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../Config");
 
-const qQuestion = sequelize.define("qQuestion", {
-    idQuestion: {
+const Quiz = sequelize.define("quiz", {
+    id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
-        allowNull: false
+        //allowNull: false
     },
-    question: {
-        type: DataTypes.STRING,
+    questions: {
+        type: DataTypes.ARRAY(DataTypes.INTEGER),
         primaryKey: false
     },
-    options: {
-        type: DataTypes.ARRAY(DataTypes.STRING),
-        primaryKey: false
-    },
-    answer: {
-        type: DataTypes.STRING,
+    date_creation: {
+        type: DataTypes.DATE,
         primaryKey: false
     },
     difficulty: {
@@ -26,11 +22,11 @@ const qQuestion = sequelize.define("qQuestion", {
     category: {
         type: DataTypes.STRING,
         primaryKey: false
-    }
+    },
 }, {
     freezeTableName: true,
-    tableName: 'qQuestion',
+    tableName: 'quiz',
     timestamps: false
 })
 
-module.exports = qQuestion;
+module.exports = Quiz;

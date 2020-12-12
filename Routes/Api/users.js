@@ -1,9 +1,10 @@
 const router = require('express').Router();
-const User_Ctrl = require("../../Controllers/qUser_ctrl")
+const qUser_Ctrl = require("../../Controllers/qUser_ctrl")
 
-router.get('/', User_Ctrl.getAll)
-router.get('/:nickName', User_Ctrl.getUserByNick)
-router.post('/signup', User_Ctrl.signUp)
-router.post('/signin', User_Ctrl.signIn)
+router.get('/', qUser_Ctrl.getAll)
+router.get('/:nick', qUser_Ctrl.getUserByNick)
+router.post('/signup', qUser_Ctrl.signUp)
+router.post('/signin', qUser_Ctrl.signIn)
+router.post('/savequiz', qUser_Ctrl.saveQuizDone)
 
 module.exports = router;
