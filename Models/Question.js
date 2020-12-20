@@ -5,7 +5,7 @@ const Question = sequelize.define("question", {
     id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
-        allowNull: false
+        //allowNull: false
     },
     question: {
         type: DataTypes.STRING,

@@ -38,7 +38,7 @@ exports.signUp = (req, res) => {
             }
             qUser.create(newuser)
                 .then((response) => {
-                    res.status(200).send({ code: 5, newUser: response})
+                    res.status(200).send({ code: 5, newUser: response })
                 })
                 .catch((err) => {
                     res.status(200).send({ code: 6, err_message: `El usuario ${req.body.nick} ya existe. Elija otro nombre de usuario. Gracias` })
@@ -61,7 +61,7 @@ exports.signIn = (req, res) => {
                     if (istrue) {
                         res.status(200).send({ code: 2, isLogged: istrue })
                     } else {
-                        res.status(200).send({ code: 3, isLogged: istrue, err_message: `La contraseña para ${req.body.nick} no es válida`})
+                        res.status(200).send({ code: 3, isLogged: istrue, err_message: `La contraseña para ${req.body.nick} no es válida` })
                     }
                 }
             })
@@ -73,11 +73,28 @@ exports.signIn = (req, res) => {
 
 exports.saveQuizDone = (req, res) => {
     User_Quiz.create(req.body)
-    .then((response) => {
-        res.status(200).send({newQuizDone: response})
-    })
-    .catch((err) => {
-        console.log(err);
-        res.status(200).send({err_message: "Error al guardar cuestionario", err_code: 1})
-    })
+        .then((response) => {
+            User_Quiz.findOne({
+                attributes: [
+                    [User_Quiz.sequelize.fn('AVG', User_Quiz.sequelize.col('result')), 'medium_score'],
+                ],
+                where: { nick: req.body.nick },
+                group: 'nick'
+            }).then((response) => {
+                let { medium_score } = JSON.parse(JSON.stringify(response));
+                let avg_score = parseFloat(medium_score).toFixed(2);
+                qUser.update(
+                    { medium_score: avg_score },
+                    {
+                        where: { nick: req.body.nick }
+                    }).then(() => {
+                        res.status(200).send({ res: "Puntuación actualizada" })
+                    })
+            }).catch((err) => {
+                res.status(200).send({ err_message: "Error al sacar la clasificación", err_code: 1 })
+            })
+
+        }).catch((err) => {
+            res.status(200).send({ err_message: "Error al guardar cuestionario", err_code: 1 })
+        })
 }
