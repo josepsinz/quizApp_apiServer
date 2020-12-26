@@ -18,6 +18,11 @@ const qUser = sequelize.define('qUser', {
         allowNull: false,
         defaultValue: 0
     },
+    created_at: {
+        type: DataTypes.DATE,
+        primaryKey: false,
+        allowNull: false
+    }
 }, {
     // Other model options go here
     freezeTableName: true,

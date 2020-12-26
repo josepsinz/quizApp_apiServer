@@ -12,12 +12,8 @@ const User_Quiz = sequelize.define("user_quiz", {
         primaryKey: true,
         allowNull: false
     },
-    date_begin: {
-        type: DataTypes.DATE,
-        primaryKey: false
-    },
-    date_end: {
-        type: DataTypes.DATE,
+    duration: {
+        type: DataTypes.FLOAT,
         primaryKey: false
     },
     result: {

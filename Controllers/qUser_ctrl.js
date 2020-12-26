@@ -1,6 +1,7 @@
 const qUser = require("../Models/qUser");
 const bcrypt = require("bcrypt");
 const User_Quiz = require("../Models/User_Quiz");
+const { Op } = require("sequelize");
 
 exports.getAll = (_, res) => {
     qUser.findAll()
@@ -97,4 +98,68 @@ exports.saveQuizDone = (req, res) => {
         }).catch((err) => {
             res.status(200).send({ err_message: "Error al guardar cuestionario", err_code: 1 })
         })
+}
+
+exports.getMyProfileStatistics = (req, res) => {
+    qUser.findAll({
+        where: {
+            nick: { [Op.ne]: 'admin' },
+        },
+        order: ['medium_score desc']
+    }).then( (users) => {
+        const infoUsersOrderBy = JSON.parse(JSON.stringify(users));
+        let ranking;
+        const { created_at } = infoUsersOrderBy.find( (el, index) => {
+            ranking = index + 1;
+            return el.nick === req.params.nick
+        } );
+        let registry = created_at.substring(0,10)
+        User_Quiz.findAll({
+            attributes: [
+                [User_Quiz.sequelize.fn('AVG', User_Quiz.sequelize.col('result')), 'medium_score'],
+                [User_Quiz.sequelize.fn('MAX', User_Quiz.sequelize.col('result')), 'max_result'],
+                [User_Quiz.sequelize.fn('MIN', User_Quiz.sequelize.col('duration')), 'min_duration'],
+                [User_Quiz.sequelize.fn('COUNT', User_Quiz.sequelize.col('id_quiz')), 'quiz_done'],
+            ],
+            where : {
+                nick: req.params.nick
+            }
+        }).then( (data) => {
+            let result = JSON.parse(JSON.stringify(data));
+            let statistics = {
+                ...result[0],
+                ranking,
+                created_at: registry
+            }
+            res.status(200).send({ statistics })
+        }).catch(err => {
+            console.log(err);
+            res.status(200).send({ error: err })
+        })
+    }).catch( (err) => {
+        console.log(err);
+        res.status(200).send({ error: err})
+    })
+}
+
+exports.deleteUser = (req, res) => {
+    User_Quiz.destroy({
+        where: {
+            nick: req.params.nick
+        }
+    }).then( () => {
+        qUser.destroy({
+            where: {
+                nick: req.params.nick
+            }
+        }).then( () => {
+            res.status(200).send({userDeleted: req.params.nick})
+        }).catch( (err) => {
+            console.log(err);
+            res.status(200).send({err: `Error eliminando usuario ${req.params.nick}`})
+        })
+    }).catch( (err) => {
+        res.status(200).send({err: `Error eliminando usuario ${req.params.nick}`})
+    })
+    
 }
