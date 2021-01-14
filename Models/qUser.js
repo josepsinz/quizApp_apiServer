@@ -13,7 +13,7 @@ const qUser = sequelize.define('qUser', {
         allowNull: false
     },
     medium_score: {
-        type: DataTypes.DECIMAL(10,2),
+        type: DataTypes.DECIMAL(10, 2),
         primaryKey: true,
         allowNull: false,
         defaultValue: 0

@@ -16,7 +16,7 @@ exports.getQuiz = (req, res) => {
         order: sequelize.random()
     }).then((response) => {
         let arrayResponse = JSON.parse(JSON.stringify(response))
-       
+
         let idQuestions = arrayResponse.map((el) => el.id)
         let newQuiz = {
             questions: idQuestions,
@@ -45,6 +45,7 @@ exports.createQuestion = (req, res) => {
         .then((response) => {
             res.status(200).send({ newQuestion: response })
         }).catch((err) => {
+            console.log(err)
             res.status(200).send({ err_message: "Error al enviar pregunta", err_code: 1 })
         })
 }
@@ -62,5 +63,17 @@ exports.getTableResults = (_, res) => {
         res.status(200).send({ tables: response })
     }).catch((err) => {
         res.status(200).send({ err_message: "Error al sacar la clasificación", err_code: 1 })
+    })
+}
+
+function decryptNickHash(nick, hash) {
+    bcrypt.compare(nick, hash, (err, istrue) => {
+        if (err) {
+            console.log("No coincide")
+            return false
+        } else {
+            console.log("Coincide")
+            return true
+        }
     })
 }

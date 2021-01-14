@@ -1,11 +1,11 @@
 const { Sequelize } = require('sequelize');
 
 const config = {
-    POSTGRES_PASSWORD: "pgadmin",
-    POSTGRES_USER: "postgres",
-    POSTGRES_DB: "quizDB",
-    POSTGRES_HOST: "localhost",
-    POSTGRES_PORT : 5432
+    POSTGRES_PASSWORD: process.env.PASSWORD,
+    POSTGRES_USER: process.env.DB_USER,
+    POSTGRES_DB: process.env.DB,
+    POSTGRES_HOST: process.env.HOST,
+    POSTGRES_PORT : process.env.DB_PORT
 }
 
 const sequelize = new Sequelize(config.POSTGRES_DB, config.POSTGRES_USER, config.POSTGRES_PASSWORD, {

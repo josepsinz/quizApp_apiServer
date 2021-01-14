@@ -2,6 +2,7 @@ const qUser = require("../Models/qUser");
 const bcrypt = require("bcrypt");
 const User_Quiz = require("../Models/User_Quiz");
 const { Op } = require("sequelize");
+const jwt = require("jsonwebtoken");
 
 exports.getAll = (_, res) => {
     qUser.findAll()
@@ -29,7 +30,7 @@ exports.getUserByNick = (req, res) => {
 
 exports.signUp = (req, res) => {
     let newuser = {}
-    bcrypt.hash(req.body.password, 10, (err, hash) => {
+    bcrypt.hash(req.body.password, process.env.SALT_PASSWORD, (err, hash) => {
         if (err) {
             res.status(500).send({ err_message: "Error al encriptar" })
         } else {
@@ -49,6 +50,7 @@ exports.signUp = (req, res) => {
 }
 
 exports.signIn = (req, res) => {
+    let hash_nick;
     qUser.findOne({
         where: {
             nick: req.body.nick
@@ -60,7 +62,10 @@ exports.signIn = (req, res) => {
                     res.status(200).send({ code: 1, err_message: "Error al desencriptar" })
                 } else {
                     if (istrue) {
-                        res.status(200).send({ code: 2, isLogged: istrue })
+                        const token = jwt.sign({ nick: req.body.nick }, process.env.SECRET, {
+                            expiresIn: 1800 //half an hour
+                        })
+                        res.status(200).send({ code: 2, isLogged: istrue, token, hash_nick })
                     } else {
                         res.status(200).send({ code: 3, isLogged: istrue, err_message: `La contraseña para ${req.body.nick} no es válida` })
                     }
@@ -106,14 +111,14 @@ exports.getMyProfileStatistics = (req, res) => {
             nick: { [Op.ne]: 'admin' },
         },
         order: ['medium_score desc']
-    }).then( (users) => {
+    }).then((users) => {
         const infoUsersOrderBy = JSON.parse(JSON.stringify(users));
         let ranking;
-        const { created_at } = infoUsersOrderBy.find( (el, index) => {
+        const { created_at } = infoUsersOrderBy.find((el, index) => {
             ranking = index + 1;
             return el.nick === req.params.nick
-        } );
-        let registry = created_at.substring(0,10)
+        });
+        let registry = created_at.substring(0, 10)
         User_Quiz.findAll({
             attributes: [
                 [User_Quiz.sequelize.fn('AVG', User_Quiz.sequelize.col('result')), 'medium_score'],
@@ -121,10 +126,10 @@ exports.getMyProfileStatistics = (req, res) => {
                 [User_Quiz.sequelize.fn('MIN', User_Quiz.sequelize.col('duration')), 'min_duration'],
                 [User_Quiz.sequelize.fn('COUNT', User_Quiz.sequelize.col('id_quiz')), 'quiz_done'],
             ],
-            where : {
+            where: {
                 nick: req.params.nick
             }
-        }).then( (data) => {
+        }).then((data) => {
             let result = JSON.parse(JSON.stringify(data));
             let statistics = {
                 ...result[0],
@@ -136,9 +141,9 @@ exports.getMyProfileStatistics = (req, res) => {
             console.log(err);
             res.status(200).send({ error: err })
         })
-    }).catch( (err) => {
+    }).catch((err) => {
         console.log(err);
-        res.status(200).send({ error: err})
+        res.status(200).send({ error: err })
     })
 }
 
@@ -147,19 +152,19 @@ exports.deleteUser = (req, res) => {
         where: {
             nick: req.params.nick
         }
-    }).then( () => {
+    }).then(() => {
         qUser.destroy({
             where: {
                 nick: req.params.nick
             }
-        }).then( () => {
-            res.status(200).send({userDeleted: req.params.nick})
-        }).catch( (err) => {
+        }).then(() => {
+            res.status(200).send({ userDeleted: req.params.nick })
+        }).catch((err) => {
             console.log(err);
-            res.status(200).send({err: `Error eliminando usuario ${req.params.nick}`})
+            res.status(200).send({ err: `Error eliminando usuario ${req.params.nick}` })
         })
-    }).catch( (err) => {
-        res.status(200).send({err: `Error eliminando usuario ${req.params.nick}`})
+    }).catch((err) => {
+        res.status(200).send({ err: `Error eliminando usuario ${req.params.nick}` })
     })
-    
+
 }

@@ -17,7 +17,7 @@ const User_Quiz = sequelize.define("user_quiz", {
         primaryKey: false
     },
     result: {
-        type: DataTypes.DECIMAL(10,2),
+        type: DataTypes.DECIMAL(10, 2),
         primaryKey: false
     }
 }, {
