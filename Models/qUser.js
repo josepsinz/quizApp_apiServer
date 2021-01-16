@@ -2,7 +2,6 @@ const { DataTypes } = require("sequelize");
 const sequelize = require("../Config")
 
 const qUser = sequelize.define('qUser', {
-    // Model attributes are defined here
     nick: {
         type: DataTypes.STRING,
         primaryKey: true,
@@ -22,9 +21,12 @@ const qUser = sequelize.define('qUser', {
         type: DataTypes.DATE,
         primaryKey: false,
         allowNull: false
+    },
+    nick_hash: {
+        type: DataTypes.TEXT,
+        allowNull: false
     }
 }, {
-    // Other model options go here
     freezeTableName: true,
     tableName: 'qUser',
     timestamps: false

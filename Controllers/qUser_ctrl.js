@@ -3,168 +3,221 @@ const bcrypt = require("bcrypt");
 const User_Quiz = require("../Models/User_Quiz");
 const { Op } = require("sequelize");
 const jwt = require("jsonwebtoken");
+const checkHash = require("../Utils/checkHash")
 
-exports.getAll = (_, res) => {
-    qUser.findAll()
-        .then((response) => {
-            res.status(200).send({ users: response })
+exports.signUp = async (req, res) => {
+    let newUser = {}
+    let pass = false
+    let hash = ""
+    do {
+        await bcryptHashWithoutSlash(req.body.nick).then((resp) => {
+            hash = resp
+            pass = true
+        }).catch((err) => {
+            //console.log(err)
         })
-        .catch((err) => {
-            res.status(200).send({ err_message: "Error al buscar los usuarios" })
-        })
-}
-
-exports.getUserByNick = (req, res) => {
-    qUser.findOne({
-        where: {
-            nick: req.params.nick
-        }
-    })
-        .then((response) => {
-            res.status(200).send({ user: response })
-        })
-        .catch((err) => {
-            res.status(200).send({ err_message: "Error al buscar usuario" })
-        })
-}
-
-exports.signUp = (req, res) => {
-    let newuser = {}
-    bcrypt.hash(req.body.password, process.env.SALT_PASSWORD, (err, hash) => {
+    } while (!pass)
+    bcrypt.genSalt(+process.env.ROUNDS_GEN_BCRYP, (err, saltPass) => {
         if (err) {
-            res.status(500).send({ err_message: "Error al encriptar" })
-        } else {
-            newuser = {
-                ...req.body,
-                password: hash
+            console.log(err);
+            res.status(500).send({ err_message: "Error when generating salt round (password)" })
+        }
+        bcrypt.hash(req.body.password, saltPass, (err, hashPass) => {
+            if (err) {
+                console.log(err)
+                res.status(500).send({ err_message: "Error when encrypting password" })
             }
-            qUser.create(newuser)
+            newUser = {
+                nick: req.body.nick,
+                password: hashPass,
+                created_at: new Date(),
+                nick_hash: hash
+            }
+            qUser.create(newUser)
                 .then((response) => {
-                    res.status(200).send({ code: 5, newUser: response })
+                    const token = jwt.sign({ nick: req.body.nick }, process.env.SECRET, {
+                        expiresIn: 1800 //half an hour
+                    })
+                    res.status(200).send({ code: 5, token, nickHash: newUser.nick_hash })
                 })
                 .catch((err) => {
-                    res.status(200).send({ code: 6, err_message: `El usuario ${req.body.nick} ya existe. Elija otro nombre de usuario. Gracias` })
+                    console.log(err)
+                    res.status(200).send({ code: 6, err_message: `${newUser.nick} exists. Choose another nick` })
                 })
-        }
+        })
     })
 }
 
 exports.signIn = (req, res) => {
-    let hash_nick;
     qUser.findOne({
         where: {
             nick: req.body.nick
         }
     })
         .then((response) => {
-            bcrypt.compare(req.body.password, response.password, (err, istrue) => {
-                if (err) {
-                    res.status(200).send({ code: 1, err_message: "Error al desencriptar" })
+            checkHash(req.body.password, response.password).then(() => {
+                const token = jwt.sign({ nick: req.body.nick }, process.env.SECRET, {
+                    expiresIn: 1800 //half an hour
+                })
+                res.status(200).send({ code: 2, token, nickHash: response.nick_hash })
+            }).catch((reject) => {
+                if (!reject) {
+                    res.status(200).send({ code: 3, err_message: `Password not valid` })
                 } else {
-                    if (istrue) {
-                        const token = jwt.sign({ nick: req.body.nick }, process.env.SECRET, {
-                            expiresIn: 1800 //half an hour
-                        })
-                        res.status(200).send({ code: 2, isLogged: istrue, token, hash_nick })
-                    } else {
-                        res.status(200).send({ code: 3, isLogged: istrue, err_message: `La contraseña para ${req.body.nick} no es válida` })
-                    }
+                    res.status(500).send({ err_message: "Error decrypting" })
                 }
             })
         })
-        .catch((error) => {
-            res.status(200).send({ code: 4, err_message: `Usuario ${req.body.nick} no encontrado` })
+        .catch((err) => {
+            console.log(err)
+            res.status(200).send({ code: 4, err_message: `User ${req.body.nick} not found` })
         })
 }
 
 exports.saveQuizDone = (req, res) => {
-    User_Quiz.create(req.body)
-        .then((response) => {
-            User_Quiz.findOne({
-                attributes: [
-                    [User_Quiz.sequelize.fn('AVG', User_Quiz.sequelize.col('result')), 'medium_score'],
-                ],
-                where: { nick: req.body.nick },
-                group: 'nick'
-            }).then((response) => {
-                let { medium_score } = JSON.parse(JSON.stringify(response));
-                let avg_score = parseFloat(medium_score).toFixed(2);
-                qUser.update(
-                    { medium_score: avg_score },
-                    {
-                        where: { nick: req.body.nick }
-                    }).then(() => {
-                        res.status(200).send({ res: "Puntuación actualizada" })
+    qUser.findOne({
+        where: {
+            nick_hash: req.body.nickHash
+        }
+    }).then((user) => {
+        if (user) {
+            const { nickHash, ...body } = req.body
+            body.nick = user.dataValues.nick
+            User_Quiz.create(body)
+                .then(() => {
+                    User_Quiz.findOne({
+                        attributes: [
+                            [User_Quiz.sequelize.fn('AVG', User_Quiz.sequelize.col('result')), 'medium_score'],
+                        ],
+                        where: { nick: body.nick },
+                        group: 'nick'
+                    }).then((response) => {
+                        let { medium_score } = JSON.parse(JSON.stringify(response));
+                        let avg_score = parseFloat(medium_score).toFixed(2);
+                        qUser.update(
+                            { medium_score: avg_score },
+                            {
+                                where: { nick: body.nick }
+                            }).then(() => {
+                                res.status(200).send({ res: "Updated user score" })
+                            })
+                    }).catch((err) => {
+                        console.log(err)
+                        res.status(500).send({ err_message: "Error getting current quiz" })
                     })
-            }).catch((err) => {
-                res.status(200).send({ err_message: "Error al sacar la clasificación", err_code: 1 })
-            })
-
-        }).catch((err) => {
-            res.status(200).send({ err_message: "Error al guardar cuestionario", err_code: 1 })
-        })
+                }).catch((err) => {
+                    console.log(err)
+                    res.status(500).send({ err_message: "Error saving quiz" })
+                })
+        } else {
+            res.status(500).send({ err_message: "Can not find user logged properly" })
+        }
+    }).catch((err) => {
+        console.log(err)
+        res.status(500).send({ err_message: "Error getting user" })
+    })
 }
 
 exports.getMyProfileStatistics = (req, res) => {
-    qUser.findAll({
+    qUser.findOne({
         where: {
-            nick: { [Op.ne]: 'admin' },
-        },
-        order: ['medium_score desc']
-    }).then((users) => {
-        const infoUsersOrderBy = JSON.parse(JSON.stringify(users));
-        let ranking;
-        const { created_at } = infoUsersOrderBy.find((el, index) => {
-            ranking = index + 1;
-            return el.nick === req.params.nick
-        });
-        let registry = created_at.substring(0, 10)
-        User_Quiz.findAll({
-            attributes: [
-                [User_Quiz.sequelize.fn('AVG', User_Quiz.sequelize.col('result')), 'medium_score'],
-                [User_Quiz.sequelize.fn('MAX', User_Quiz.sequelize.col('result')), 'max_result'],
-                [User_Quiz.sequelize.fn('MIN', User_Quiz.sequelize.col('duration')), 'min_duration'],
-                [User_Quiz.sequelize.fn('COUNT', User_Quiz.sequelize.col('id_quiz')), 'quiz_done'],
-            ],
-            where: {
-                nick: req.params.nick
-            }
-        }).then((data) => {
-            let result = JSON.parse(JSON.stringify(data));
-            let statistics = {
-                ...result[0],
-                ranking,
-                created_at: registry
-            }
-            res.status(200).send({ statistics })
-        }).catch(err => {
-            console.log(err);
-            res.status(200).send({ error: err })
-        })
+            nick_hash: req.params.nickHash
+        }
+    }).then((user) => {
+        if (user) {
+            qUser.findAll({
+                where: {
+                    nick: { [Op.ne]: 'admin' },
+                },
+                order: ['medium_score desc']
+            }).then((users) => {
+                const infoUsersOrderBy = JSON.parse(JSON.stringify(users));
+                let ranking;
+                const { created_at } = infoUsersOrderBy.find((el, index) => {
+                    ranking = index + 1;
+                    return el.nick === user.dataValues.nick
+                });
+                let registry = created_at.substring(0, 10)
+                User_Quiz.findAll({
+                    attributes: [
+                        [User_Quiz.sequelize.fn('AVG', User_Quiz.sequelize.col('result')), 'medium_score'],
+                        [User_Quiz.sequelize.fn('MAX', User_Quiz.sequelize.col('result')), 'max_result'],
+                        [User_Quiz.sequelize.fn('MIN', User_Quiz.sequelize.col('duration')), 'min_duration'],
+                        [User_Quiz.sequelize.fn('COUNT', User_Quiz.sequelize.col('id_quiz')), 'quiz_done'],
+                    ],
+                    where: {
+                        nick: user.dataValues.nick
+                    }
+                }).then((data) => {
+                    let result = JSON.parse(JSON.stringify(data));
+                    let statistics = {
+                        ...result[0],
+                        ranking,
+                        created_at: registry,
+                        nick: user.dataValues.nick
+                    }
+                    res.status(200).send({ statistics })
+                }).catch(err => {
+                    console.log(err);
+                    res.status(500).send({ err_message: "Error getting statistics" })
+                })
+            }).catch((err) => {
+                console.log(err);
+                res.status(500).send({ err_message: "Error getting users info" })
+            })
+        } else {
+            res.status(500).send({ err_message: "Can not find user logged properly" })
+        }
     }).catch((err) => {
-        console.log(err);
-        res.status(200).send({ error: err })
+        console.log(err)
+        res.status(500).send({ err_message: "Error getting user" })
     })
 }
 
 exports.deleteUser = (req, res) => {
-    User_Quiz.destroy({
+    qUser.findOne({
         where: {
-            nick: req.params.nick
+            nick_hash: req.params.nickHash
         }
-    }).then(() => {
-        qUser.destroy({
-            where: {
-                nick: req.params.nick
-            }
-        }).then(() => {
-            res.status(200).send({ userDeleted: req.params.nick })
-        }).catch((err) => {
-            console.log(err);
-            res.status(200).send({ err: `Error eliminando usuario ${req.params.nick}` })
-        })
+    }).then((user) => {
+        if (user) {
+            User_Quiz.destroy({
+                where: {
+                    nick: user.dataValues.nick
+                }
+            }).then(() => {
+                qUser.destroy({
+                    where: {
+                        nick: user.dataValues.nick
+                    }
+                }).then(() => {
+                    res.status(200).send({ userDeleted: user.dataValues.nick })
+                }).catch((err) => {
+                    console.log(err);
+                    res.status(500).send({ err: `Error deleting user ${user.dataValues.nick}` })
+                })
+            }).catch((err) => {
+                console.log(err)
+                res.status(500).send({ err: `Error deleting user quiz` })
+            })
+        } else {
+            res.status(500).send({ err_message: "Can not find user logged properly" })
+        }
     }).catch((err) => {
-        res.status(200).send({ err: `Error eliminando usuario ${req.params.nick}` })
+        console.log(err)
+        res.status(500).send({ err_message: "Error getting user" })
     })
+}
 
+const bcryptHashWithoutSlash = (nick) => {
+    let promiseReturned = new Promise((resolved, reject) => {
+        let gen = bcrypt.genSaltSync(+process.env.ROUNDS_GEN_BCRYP)
+        let hash = bcrypt.hashSync(nick, gen)
+        if (hash.includes("/")) {
+            reject("hash not valid for these app!")
+        } else {
+            resolved(hash)
+        }
+    })
+    return promiseReturned
 }
