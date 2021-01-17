@@ -9,6 +9,7 @@ app.use(cors({
     'Access-Control-Allow-Origin': 'https://localhost:4000/'
 }));
 
+const port = process.env.PORT || 9999
 
 app.get('/favicon.ico', (_, res) => res.send(204));
 
@@ -23,8 +24,8 @@ main = async () => {
         console.error('Unable to connect to the database:', error);
     }
     app.use(require("./Routes"));
-    app.listen(process.env.SERVER_PORT, async () => {
-        console.log('Server listening on port ' + process.env.SERVER_PORT);
+    app.listen(port, async () => {
+        console.log('Server listening on port ' + port);
     })
 }
 
